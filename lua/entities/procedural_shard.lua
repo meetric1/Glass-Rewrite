@@ -285,7 +285,6 @@ end
 
 // glass func_breakable_surf replacement
 local function replaceGlass()
-    if true then return end
     for _, glass in ipairs(ents.FindByClass("func_breakable_surf")) do
         // func breakable surf is kinda cursed, its origin and angle are always 0,0,0
         // so we need to find out what they are
