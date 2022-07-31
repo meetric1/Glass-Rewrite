@@ -59,7 +59,7 @@ local function generateNormals(vertices) -- SF function
 end
 
 // takes input vertices and removes duplicate verts
-local function simplify_vertices(verts)
+local function simplify_vertices(verts, scale)
     local verts2 = {}
     local n = 0
     local average = Vector()
@@ -75,7 +75,7 @@ local function simplify_vertices(verts)
         if !stop then
             n = n + 1
             verts2[n] = (verts[i].pos or verts[i])
-            average = average + verts2[n]
+            average = average + verts2[n]// * scale
         end
     end
 
@@ -83,20 +83,10 @@ local function simplify_vertices(verts)
 
     for i = 1, #verts2 do
         verts2[i] = verts2[i] - average
+        verts2[i] = verts2[i] * scale
     end
 
     return verts2, average
-end
-
-local function rotateAroundAxis(this, axis, degrees)
-    local ca, sa = math.cos(degrees), math.sin(degrees)
-	local x,y,z = axis[1], axis[2], axis[3]
-	local length = (x*x+y*y+z*z)^0.5
-	x,y,z = x/length, y/length, z/length
-
-	return Vector((ca + (x^2)*(1-ca)) * this[1] + (x*y*(1-ca) - z*sa) * this[2] + (x*z*(1-ca) + y*sa) * this[3],
-			(y*x*(1-ca) + z*sa) * this[1] + (ca + (y^2)*(1-ca)) * this[2] + (y*z*(1-ca) - x*sa) * this[3],
-			(z*x*(1-ca) - y*sa) * this[1] + (z*y*(1-ca) + x*sa) * this[2] + (ca + (z^2)*(1-ca)) * this[3])
 end
 
 // tris are in the format {{pos = value}, {pos = value2}}

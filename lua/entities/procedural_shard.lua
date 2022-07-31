@@ -13,6 +13,7 @@ local generateUV, generateNormals, simplify_vertices, split_convex, split_entity
 
 function ENT:SetupDataTables()
 	self:NetworkVar("String", 0, "PhysModel")
+    self:NetworkVar("Vector", 0, "PhysScale")
     self:NetworkVar("Entity", 0, "ReferenceShard")
     self:NetworkVar("Entity", 1, "OriginalShard")
 end
@@ -20,7 +21,7 @@ end
 local use_expensive = CreateConVar("glass_lagfriendly", 0, {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED}, "", 0, 1)
 
 function ENT:BuildCollision(verts, pointer)
-    local new_verts, offset = simplify_vertices(verts)
+    local new_verts, offset = simplify_vertices(verts, self:GetPhysScale())
     self:EnableCustomCollisions()
 	self:PhysicsInitConvex(new_verts)
 
@@ -89,7 +90,7 @@ if CLIENT then
     end
 else
     function ENT:Split(pos, explode)
-        //local function randVec() return Vector(math.Rand(-1, 1), math.Rand(-1, 1), math.Rand(-1, 1)):GetNormalized() end
+        local self = self
         if explode then pos = pos * 0.5 end  // if explosion, kind of "shrink" position closer to the center of the shard
         local function randVec() return VectorRand():GetNormalized() end
         local function randPos() return pos end
@@ -102,6 +103,8 @@ else
         local color = self:GetColor()
         local rendermode = self:GetRenderMode()
         local vel = self:GetVelocity()
+        local phys_scale = self:GetPhysScale()
+        local original_shard = self:GetOriginalShard():IsValid() and self:GetOriginalShard() or self
         local lastblock
         local valid_entity = {false}      // table cuz i want pointers
         for k, physmesh in ipairs(convexes) do 
@@ -109,7 +112,8 @@ else
             block:SetPos(pos)
             block:SetAngles(ang)
             block:SetPhysModel(model)
-            block:SetOriginalShard(self:GetOriginalShard():IsValid() and self:GetOriginalShard() or self)
+            block:SetPhysScale(Vector(1, 1, 1))
+            block:SetOriginalShard(original_shard)
             block:Spawn()
             block:SetReferenceShard(self)
             block:SetMaterial(material)
@@ -162,7 +166,7 @@ else
         end
 
         // in case clientside receives sharded entity before this entity
-        // give clients 10 seconds to try and find shard
+        // give clients 5 seconds to try and find shard
         timer.Simple(5, function()
             if !self:IsValid() then return end
             self:SetPos(Vector())
@@ -273,3 +277,57 @@ end
 function ENT:UpdateTransmitState()
     return TRANSMIT_ALWAYS
 end
+
+if CLIENT then 
+    language.Add("procedural_shard", "Glass Shard")
+    return 
+end
+
+// glass func_breakable_surf replacement
+local function replaceGlass()
+    if true then return end
+    for _, glass in ipairs(ents.FindByClass("func_breakable_surf")) do
+        // func breakable surf is kinda cursed, its origin and angle are always 0,0,0
+        // so we need to find out what they are
+
+        // angle can be found by going through 3 of the 4 points defined on a surf entity and finding the angle by constructing a triangle
+        local verts = glass:GetBrushSurfaces()[1]:GetVertices()
+        local glass_angle = (verts[1] - verts[2]):Cross(verts[1] - verts[3]):Angle()
+
+        // position can be found by getting the middle of the bounding box in the object
+        local offset = (glass:OBBMaxs() + glass:OBBMins()) * 0.5
+
+        // weird rotate issue fix
+        local rotate_angle = glass_angle
+        if glass_angle[1] >= 45 and glass_angle[2] >= 180 then
+            rotate_angle = -rotate_angle
+        end
+
+        // our bounding box needs to be rotated to match the angle of the glass, the rotation is currently in local space, we need to convert to world
+        verts[1] = verts[1] - offset
+        verts[3] = verts[3] - offset
+        verts[1]:Rotate(-rotate_angle)
+        verts[3]:Rotate(-rotate_angle)
+
+        // now we have the actual size of the glass, take the 2 points and subtract to find the size, then divide by 2
+        local size = (verts[1] - verts[3]) * 0.5
+
+        // create the shard
+        local block = ents.Create("procedural_shard")
+        block:SetPhysModel("models/hunter/blocks/cube025x025x025.mdl")
+        block:SetPhysScale(Vector(1, size[2], size[3]) / 5.90625)  // 5.90625 is the size of the block model
+        block:SetPos(offset)
+        block:SetAngles(glass_angle)
+        block:SetMaterial(glass:GetMaterials()[1])
+        block:Spawn()
+    
+        block:BuildCollision(util.GetModelMeshes("models/hunter/blocks/cube025x025x025.mdl")[1].triangles)
+        if block:GetPhysicsObject():IsValid() then block:GetPhysicsObject():EnableMotion(false) end
+
+        // remove original func_ entity
+        SafeRemoveEntity(glass)
+    end
+end
+
+hook.Add("InitPostEntity", "glass_init", replaceGlass)
+hook.Add("PostCleanupMap", "glass_init", replaceGlass)

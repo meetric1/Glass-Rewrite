@@ -31,6 +31,7 @@ function TOOL:LeftClick(tr)
         block:SetPos(ent:GetPos())
         block:SetAngles(ent:GetAngles())
         block:SetPhysModel(ent:GetModel())
+		block:SetPhysScale(Vector(1, 1, 1))
         block:Spawn()
         block:BuildCollision(util.GetModelMeshes(block:GetPhysModel())[1].triangles)
 
@@ -60,4 +61,3 @@ function TOOL:LeftClick(tr)
 
 	return true
 end
-
