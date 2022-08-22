@@ -89,13 +89,18 @@ if CLIENT then
         end
     end
 else
-    function ENT:Split(pos, explode)
+    function ENT:Split(pos, explode, norm)
         local self = self
         if explode then pos = pos * 0.5 end  // if explosion, kind of "shrink" position closer to the center of the shard
-        local function randVec() return VectorRand():GetNormalized() end
         local function randPos() return pos end
         local convexes = {}
-        split_entity({randVec, randPos}, self.TRIANGLES, convexes, 5)
+		if norm then
+			local function randVec() return norm end
+			split_entity({randVec, randPos}, self.TRIANGLES, convexes, 1)
+		else
+			local function randVec() return VectorRand():GetNormalized() end
+			split_entity({randVec, randPos}, self.TRIANGLES, convexes, 5)
+		end
         local pos = self:GetPos()
         local ang = self:GetAngles()
         local model = self:GetPhysModel()
