@@ -1,8 +1,8 @@
 AddCSLuaFile()
 
 // to shut up console
-ENT.Type = "anim"
-ENT.Base = "base_gmodentity"
+ENT.Type      = "anim"
+ENT.Base      = "base_gmodentity"
 ENT.Spawnable = false
 
 local models = {
@@ -29,6 +29,10 @@ local names = {
     "Glass Block 4",
 }
 
+local expensive_mat = Material("glass_rewrite/glass_refract")
+
+local default_mat = Material("models/props_combine/health_charger_glass")
+
 local use_expensive = CreateConVar("glass_expensive_material", 0, {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED}, "Use nicer material", 0, 1)
 
 for k, v in ipairs(models) do
@@ -43,10 +47,16 @@ for k, v in ipairs(models) do
         block:SetPhysScale(Vector(1, 1, 1))
         block:Spawn()
         block:BuildCollision(util.GetModelMeshes(block:GetPhysModel())[1].triangles)
-        if use_expensive:GetBool() then block:SetMaterial("glass_rewrite/glass_refract") end
+
+        if use_expensive:GetBool() then -- Expensive material
+            block:SetMaterial(expensive_mat)
+        else -- Otherwise use simple default material
+            block:SetMaterial(default_mat)
+        end -- Primary material is properly set
+        -- This will correctly propagate across ENT:Split()
 
         local phys = block:GetPhysicsObject()
-        if phys then phys:EnableMotion(false) end
+        if phys and phys:IsValid() then phys:EnableMotion(false) end
 
         return block
     end
@@ -56,7 +66,7 @@ end
 
 local ENT = scripted_ents.Get("procedural_shard")
 ENT.Spawnable = true
-ENT.PrintName =  "​100% Fragile"
+ENT.PrintName = "100% Fragile"
 ENT.AdminOnly = true
 function ENT:SpawnFunction(ply, tr, class)
     local block = ents.Create("procedural_shard")

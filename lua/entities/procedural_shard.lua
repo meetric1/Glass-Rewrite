@@ -3,16 +3,16 @@ AddCSLuaFile()
 ENT.Type = "anim"
 ENT.Base = "base_gmodentity"
 
-ENT.Category		= "Glass: Rewrite"
-ENT.Author			= "Mee"
-ENT.Purpose			= "Destructable Fun"
-ENT.Instructions	= "Spawn and damage it"
-ENT.Spawnable		= false
+ENT.Category     = "Glass: Rewrite"
+ENT.Author       = "Mee"
+ENT.Purpose      = "Destructable Fun"
+ENT.Instructions = "Spawn and damage it"
+ENT.Spawnable    = false
 
 local generateUV, generateNormals, simplify_vertices, split_convex, split_entity = include("world_functions.lua")
 
 function ENT:SetupDataTables()
-	self:NetworkVar("String", 0, "PhysModel")
+    self:NetworkVar("String", 0, "PhysModel")
     self:NetworkVar("Vector", 0, "PhysScale")
     self:NetworkVar("Entity", 0, "ReferenceShard")
     self:NetworkVar("Entity", 1, "OriginalShard")
@@ -23,7 +23,7 @@ local use_expensive = CreateConVar("glass_lagfriendly", 0, {FCVAR_ARCHIVE, FCVAR
 function ENT:BuildCollision(verts, pointer)
     local new_verts, offset = simplify_vertices(verts, self:GetPhysScale())
     self:EnableCustomCollisions()
-	self:PhysicsInitConvex(new_verts)
+    self:PhysicsInitConvex(new_verts)
 
     // physics object isnt valid, remove cuz its probably weird
     if SERVER then
@@ -189,9 +189,9 @@ else
     end
 
     function ENT:PhysicsCollide(data)
-    	if self:IsPlayerHolding() then return end	--unbreakable if held
+        if self:IsPlayerHolding() then return end --unbreakable if held
         local speed_limit = self.IS_FUNNY_GLASS and -1 or 300
-    	if data.Speed > speed_limit and self.CAN_BREAK then
+        if data.Speed > speed_limit and self.CAN_BREAK then
             local ho = data.HitObject
             if ho and ho:IsValid() and ho.GetClass and ho:GetClass() == "procedural_shard" and ho.CAN_BREAK then return end
 
@@ -210,8 +210,8 @@ else
                 if !self or !self:IsValid() then return end
                 self:Split(self:WorldToLocal(pos))
             end)
-    	end
-	end	
+        end
+    end
 
     function ENT:OnRemove()
         local orig_shard = self:GetOriginalShard()
